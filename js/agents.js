@@ -7,6 +7,7 @@ const agentStates = {}; // botId -> AgentState
 const activeIntervals = {}; // botId -> interval handle
 let chatLog = []; // shared chat history: {sender, text, timestamp}
 let videoContext = { title: '', videoId: '', currentTime: 0, duration: 1, isPlaying: false };
+let agentConversationId = null;
 
 function initAgentState(bot) {
   agentStates[bot.id] = {
@@ -69,6 +70,16 @@ async function runAgentTick(bot) {
 
   displayBotMessage(bot, reaction);
 
+  if (window.pendo && typeof window.pendo.trackAgent === 'function') {
+    window.pendo.trackAgent("agent_response", {
+      agentId: "-mJxpoLFIklRkZKdSzklrwiANNw",
+      conversationId: agentConversationId,
+      messageId: crypto.randomUUID(),
+      content: reaction,
+      modelUsed: "gemini-1.5-flash"
+    });
+  }
+
   agentStates[bot.id].lastSpokenAt = Date.now();
   agentStates[bot.id].recentMessages.push(reaction);
   agentStates[bot.id].silenceStreak = 0;
@@ -99,6 +110,7 @@ function triggerInterBotEmojis(speakingBot) {
  * Start staggered agent loops for all active bots.
  */
 function startAgentLoops(activeBotIds) {
+  agentConversationId = crypto.randomUUID();
   const allBots = getAllBots();
 
   activeBotIds.forEach((botId) => {
@@ -150,6 +162,15 @@ async function handleUserMessage(text) {
   chatLog.push({ sender: 'You', text, timestamp: videoContext.currentTime });
   Novus.userMessageSent(text.length, getProgressPct());
 
+  if (window.pendo && typeof window.pendo.trackAgent === 'function') {
+    window.pendo.trackAgent("prompt", {
+      agentId: "-mJxpoLFIklRkZKdSzklrwiANNw",
+      conversationId: agentConversationId,
+      messageId: crypto.randomUUID(),
+      content: text
+    });
+  }
+
   const allBots = getAllBots();
   const activeBotIds = Object.keys(activeIntervals);
 
@@ -167,6 +188,17 @@ async function handleUserMessage(text) {
       if (!reply) return; // graceful fail
 
       displayBotMessage(bot, reply);
+
+      if (window.pendo && typeof window.pendo.trackAgent === 'function') {
+        window.pendo.trackAgent("agent_response", {
+          agentId: "-mJxpoLFIklRkZKdSzklrwiANNw",
+          conversationId: agentConversationId,
+          messageId: crypto.randomUUID(),
+          content: reply,
+          modelUsed: "gemini-1.5-flash"
+        });
+      }
+
       agentStates[bot.id].lastSpokenAt = Date.now();
       Novus.botReplyToUser(bot.id, getProgressPct(), Date.now() - startTime);
     }, staggerDelay);
