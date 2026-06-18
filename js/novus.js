@@ -7,14 +7,13 @@
 
 function trackEvent(eventName, properties = {}) {
   try {
-    if (typeof window !== 'undefined' && window.novus && typeof window.novus.track === 'function') {
-      window.novus.track(eventName, properties);
+    if (typeof pendo !== 'undefined' && typeof pendo.track === 'function') {
+      pendo.track(eventName, properties);
     } else {
-      // Novus snippet not loaded (e.g. local dev) — log so nothing is silently lost
-      console.log('[novus:dev]', eventName, properties);
+      console.log('[pendo:dev]', eventName, properties);
     }
   } catch (err) {
-    console.warn('Novus tracking failed (non-blocking):', err.message);
+    console.warn('Pendo tracking failed (non-blocking):', err.message);
   }
 }
 
@@ -58,9 +57,19 @@ const Novus = {
 
   userMessageSent: (length, progressPct) => trackEvent('user_message_sent', { length, video_progress: progressPct }),
 
-  userIgnoredBots: (sessionLength) => trackEvent('user_ignored_bots', { session_length: sessionLength }),
+  userIgnoredBots: (sessionLength, botCount, videoId, completionRate) => trackEvent('user_ignored_bots', {
+    session_length: sessionLength, bot_count: botCount, video_id: videoId, completion_rate: completionRate
+  }),
 
   userReturned: (sessionNumber) => trackEvent('user_returned', { session_number: sessionNumber }),
 
-  botCallFailed: (reason, attempt) => trackEvent('bot_call_failed', { reason, attempt })
+  botCallFailed: (reason, attempt) => trackEvent('bot_call_failed', { reason, attempt }),
+
+  adminSuggestionsGenerated: (summary, hasSuggestions) => trackEvent('admin_suggestions_generated', {
+    session_count: summary.total_sessions,
+    avg_completion_rate: summary.avg_completion_rate,
+    avg_messages_per_session: summary.avg_messages_per_session,
+    most_picked_bot: summary.most_picked_bot,
+    has_suggestions: hasSuggestions
+  })
 };

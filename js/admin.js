@@ -66,6 +66,7 @@ async function generateAndShowSuggestions(summary) {
   box.innerHTML = `<p style="color: var(--text-dim); font-size: 14px;">Analyzing real session data...</p>`;
 
   const suggestions = await generateAdminSuggestions(summary);
+  Novus.adminSuggestionsGenerated(summary, !!suggestions);
 
   if (!suggestions) {
     box.innerHTML = `<p style="color: var(--text-dim); font-size: 14px;">Not enough data yet for meaningful suggestions — run more test sessions.</p>`;
