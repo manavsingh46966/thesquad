@@ -8,6 +8,7 @@ let currentVideoId = null;
 let progressTrackerInterval = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+  pendo.initialize({ visitor: { id: '' } });
   Novus.appLoaded();
   trackReturningUser();
   renderSquadPreview();

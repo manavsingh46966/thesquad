@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>The Squad — watch anything, never alone</title>
   <link rel="stylesheet" href="css/style.css">
+  <script>
+(function(apiKey){
+    (function(p,e,n,d,o){var v,w,x,y,z;o=p[d]=p[d]||{};o._q=o._q||[];
+    v=['initialize','identify','updateOptions','pageLoad','track', 'trackAgent'];for(w=0,x=v.length;w<x;++w)(function(m){
+    o[m]=o[m]||function(){o._q[m===v[0]?'unshift':'push']([m].concat([].slice.call(arguments,0)));};})(v[w]);
+    y=e.createElement(n);y.async=!0;y.src='https://cdn.pendo.io/agent/static/'+apiKey+'/pendo.js';
+    z=e.getElementsByTagName(n)[0];z.parentNode.insertBefore(y,z);})(window,document,'script','pendo');
+})('aa1c8ae8-b71d-4dd6-8938-6039e12b6ed1');
+  </script>
 </head>
 <body>
 
@@ -79,11 +88,6 @@
       <p style="color: var(--text-dim); font-size: 14px;">Click "Generate AI Suggestions" to analyze session data.</p>
     </div>
   </div>
-
-  <!-- Novus snippet placeholder — replace with real install snippet from novus.pendo.io -->
-  <script>
-    // window.novus = { track: function(event, props) { ... } };
-  </script>
 
   <script src="js/bots.js"></script>
   <script src="js/novus.js"></script>
