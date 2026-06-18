@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Squad — watch anything, never alone</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- SCREEN 1: LANDING -->
+  <div class="screen active" id="screen-landing">
+    <div class="landing-content">
+      <div class="landing-eyebrow">Now streaming with company</div>
+      <h1 class="landing-title">Watch anything.<br>Never alone.</h1>
+      <p class="landing-subtitle">Paste any YouTube link. Your squad shows up, reacts in real time, and talks to you — not at you.</p>
+
+      <div class="url-input-row">
+        <input type="text" id="youtube-url-input" placeholder="Paste a YouTube link...">
+        <button class="btn-primary" id="btn-go" disabled>Bring the squad</button>
+      </div>
+      <div class="landing-error" id="landing-error"></div>
+
+      <div class="squad-preview" id="squad-preview"></div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: SQUAD SELECTION -->
+  <div class="screen" id="screen-squad">
+    <h2 class="squad-select-title">Who's watching tonight?</h2>
+    <p class="squad-select-subtitle">Pick your squad. Mix it up however you want.</p>
+
+    <div class="bot-card-grid" id="bot-card-grid"></div>
+
+    <button class="btn-primary" id="btn-start-watching">Start watching</button>
+  </div>
+
+  <!-- Custom bot creation modal -->
+  <div class="modal-overlay" id="custom-bot-modal">
+    <div class="modal-box">
+      <h3>Add a friend</h3>
+      <p>Describe their personality — we'll bring them in.</p>
+      <input type="text" id="custom-bot-name" placeholder="Their name (e.g. Tony)">
+      <textarea id="custom-bot-desc" rows="4" placeholder="e.g. super blunt, never sugarcoats anything, makes savage jokes at the worst times"></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" id="btn-cancel-custom-bot">Cancel</button>
+        <button class="btn-primary" id="btn-create-custom-bot">Create</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3: WATCH ROOM -->
+  <div class="screen" id="screen-watch">
+    <div class="watch-layout">
+      <div class="video-pane">
+        <div id="youtube-player"></div>
+      </div>
+      <div class="chat-pane">
+        <div id="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="Say something...">
+          <button id="btn-send-message">Send</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: ADMIN DASHBOARD -->
+  <div class="screen" id="screen-admin">
+    <div class="admin-header">
+      <h2 class="admin-title">Squad Insights</h2>
+      <button class="btn-secondary" id="btn-generate-suggestions">Generate AI Suggestions</button>
+    </div>
+    <div class="admin-disclaimer">Showing data from real test sessions run during development. Sample size is small — early signal, not a population claim.</div>
+
+    <div class="admin-grid" id="admin-stats-grid"></div>
+
+    <div class="suggestions-box" id="admin-suggestions">
+      <p style="color: var(--text-dim); font-size: 14px;">Click "Generate AI Suggestions" to analyze session data.</p>
+    </div>
+  </div>
+
+  <!-- Novus snippet placeholder — replace with real install snippet from novus.pendo.io -->
+  <script>
+    // window.novus = { track: function(event, props) { ... } };
+  </script>
+
+  <script src="js/bots.js"></script>
+  <script src="js/novus.js"></script>
+  <script src="js/gemini.js"></script>
+  <script src="js/agents.js"></script>
+  <script src="js/reactions.js"></script>
+  <script src="js/admin.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
