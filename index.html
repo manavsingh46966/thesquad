@@ -37,8 +37,15 @@
         window.pendo.updateOptions({ account: { id: 'thesquad-hackathon' } });
       }
     }, 300);
+
+    // CRITICAL: your app's own code (novus.js) calls window.novus.track(...), but the
+    // snippet above only ever creates window.pendo. Without this alias, every real
+    // in-app event (app_loaded, bot_reaction, user_message_sent, etc.) silently falls
+    // back to a console.log and NEVER reaches Pendo at all. This line was present in an
+    // earlier version of this snippet and got dropped during a later edit — that's the
+    // actual root cause of zero track events showing up despite raw traffic existing.
+    window.novus = window.pendo;
   })();
-  window.novus = window.pendo;
 </script>
 </head>
 <body>
