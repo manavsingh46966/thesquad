@@ -1,3 +1,4 @@
+JS
 // ============================================
 // MAIN APP — navigation, YouTube, wiring
 // ============================================
@@ -302,6 +303,12 @@ function handleVideoEnded() {
   };
 
   Novus.videoEnded(endStats);
+
+  const userMessageCount = chatLog.filter(m => m.sender === 'You').length;
+  if (userMessageCount === 0) {
+    Novus.userIgnoredBots(endStats.total_watch_time, selectedBotIds.length, currentVideoId, completionRate);
+  }
+
   logSessionForAdmin(endStats); // real data for admin dashboard, no fabrication
 
   // Staggered final hot takes
