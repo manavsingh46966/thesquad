@@ -1,9 +1,15 @@
 // ============================================
-// GEMINI API LAYER (hardened per workflow doc)
+// AI API LAYER — NEAR AI Cloud, OpenAI-compatible (hardened per workflow doc)
 // ============================================
 
 const GEMINI_TIMEOUT_MS = 4000;
 const GEMINI_ENDPOINT = '/.netlify/functions/gemini'; // proxied through serverless function, key never exposed
+
+// Two-tier model strategy:
+// FAST_MODEL  — high-frequency, low-stakes calls (decisions, reactions, replies). Cheapest, no reasoning overhead.
+// QUALITY_MODEL — rare, one-off calls where better writing is worth the small extra cost.
+const FAST_MODEL = 'openai/gpt-4.1-nano';
+const QUALITY_MODEL = 'openai/gpt-4.1-mini';
 
 /**
  * Generic fetch wrapper with timeout + single retry.
@@ -53,7 +59,7 @@ Reply with ONLY one word: SPEAK or SILENT`;
 
   const result = await callGeminiWithHardening({
     prompt,
-    model: 'gemini-1.5-flash',
+    model: FAST_MODEL,
     maxTokens: 5
   });
 
@@ -75,7 +81,7 @@ React to this moment in character. Be specific to what's happening. Max 2 senten
 
   const result = await callGeminiWithHardening({
     prompt,
-    model: 'gemini-1.5-flash',
+    model: FAST_MODEL,
     maxTokens: 60
   });
 
@@ -92,7 +98,7 @@ Given your personality, do you reply? Reply with ONLY one word: SPEAK or SILENT`
 
   const result = await callGeminiWithHardening({
     prompt,
-    model: 'gemini-1.5-flash',
+    model: FAST_MODEL,
     maxTokens: 5
   });
 
@@ -111,7 +117,7 @@ Reply in character. Max 2-3 sentences.`;
 
   const result = await callGeminiWithHardening({
     prompt,
-    model: 'gemini-1.5-flash',
+    model: FAST_MODEL,
     maxTokens: 80
   });
 
@@ -135,7 +141,7 @@ Write ONLY the personality prompt itself, nothing else.`;
 
   const result = await callGeminiWithHardening({
     prompt,
-    model: 'gemini-1.5-flash',
+    model: QUALITY_MODEL,
     maxTokens: 200
   });
 
@@ -163,7 +169,7 @@ Be specific and actionable. Respond with ONLY valid JSON in this format:
 
   const result = await callGeminiWithHardening({
     prompt,
-    model: 'gemini-1.5-flash',
+    model: QUALITY_MODEL,
     maxTokens: 500
   });
 

@@ -46,17 +46,17 @@ const Novus = {
 
   botDecisionSilent: (botId, progressPct) => trackEvent('bot_decision_silent', { bot_id: botId, video_progress: progressPct }),
 
-  botReaction: (botId, progressPct, timestamp, reactionLength) => trackEvent('bot_reaction', {
-    bot: botId, video_progress: progressPct, timestamp, reaction_length: reactionLength
+  botReaction: (botId, progressPct, timestamp, reactionLength, reactionText) => trackEvent('bot_reaction', {
+    bot: botId, video_progress: progressPct, timestamp, reaction_length: reactionLength, reaction_text: reactionText
   }),
 
   interBotEmoji: (fromBot, mood) => trackEvent('inter_bot_emoji', { from_bot: fromBot, mood }),
 
-  botReplyToUser: (botId, progressPct, responseTimeMs) => trackEvent('bot_reply_to_user', {
-    bot: botId, video_progress: progressPct, response_time_ms: responseTimeMs
+  botReplyToUser: (botId, progressPct, responseTimeMs, replyText, userMessageText) => trackEvent('bot_reply_to_user', {
+    bot: botId, video_progress: progressPct, response_time_ms: responseTimeMs, reply_text: replyText, user_message_text: userMessageText
   }),
 
-  userMessageSent: (length, progressPct) => trackEvent('user_message_sent', { length, video_progress: progressPct }),
+  userMessageSent: (length, progressPct, messageText) => trackEvent('user_message_sent', { length, video_progress: progressPct, message_text: messageText }),
 
   userIgnoredBots: (sessionLength) => trackEvent('user_ignored_bots', { session_length: sessionLength }),
 

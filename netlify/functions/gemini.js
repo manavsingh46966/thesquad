@@ -1,13 +1,15 @@
-// Netlify Function: proxies requests to Gemini API so the key never reaches the browser
+// Netlify Function: proxies requests to NEAR AI Cloud (OpenAI-compatible) so the key never reaches the browser
 // Deploys automatically with the rest of the site — no separate backend needed.
+// Note: filename/endpoint path kept as "gemini" so the existing /.netlify/functions/gemini
+// route the frontend already calls doesn't need to change.
 
 exports.handler = async function (event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) {
+  const NEAR_API_KEY = process.env.NEAR_API_KEY;
+  if (!NEAR_API_KEY) {
     return { statusCode: 500, body: JSON.stringify({ error: 'Missing API key in environment' }) };
   }
 
@@ -18,22 +20,25 @@ exports.handler = async function (event) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid request body' }) };
   }
 
-  const { prompt, model = 'gemini-1.5-flash', maxTokens = 100 } = body;
+  // model is passed in from the frontend per-call (two-tier strategy lives in js/gemini.js)
+  const { prompt, model = 'openai/gpt-4.1-nano', maxTokens = 100 } = body;
   if (!prompt) {
     return { statusCode: 400, body: JSON.stringify({ error: 'Missing prompt' }) };
   }
 
   try {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+    const url = 'https://cloud-api.near.ai/v1/chat/completions';
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${NEAR_API_KEY}`
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          maxOutputTokens: maxTokens,
-          temperature: 0.9
-        }
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: maxTokens,
+        temperature: 0.9
       })
     });
 
@@ -43,7 +48,7 @@ exports.handler = async function (event) {
     }
 
     const data = await res.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    const text = data?.choices?.[0]?.message?.content || '';
 
     return {
       statusCode: 200,

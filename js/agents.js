@@ -73,7 +73,7 @@ async function runAgentTick(bot) {
   agentStates[bot.id].recentMessages.push(reaction);
   agentStates[bot.id].silenceStreak = 0;
 
-  Novus.botReaction(bot.id, context.progressPct, videoContext.currentTime, reaction.length);
+  Novus.botReaction(bot.id, context.progressPct, videoContext.currentTime, reaction.length, reaction);
 
   // Step 6: other bots may react with emoji only (30% chance each)
   triggerInterBotEmojis(bot);
@@ -148,7 +148,7 @@ function stopAgentLoops() {
  */
 async function handleUserMessage(text) {
   chatLog.push({ sender: 'You', text, timestamp: videoContext.currentTime });
-  Novus.userMessageSent(text.length, getProgressPct());
+  Novus.userMessageSent(text.length, getProgressPct(), text);
 
   const allBots = getAllBots();
   const activeBotIds = Object.keys(activeIntervals);
@@ -168,7 +168,7 @@ async function handleUserMessage(text) {
 
       displayBotMessage(bot, reply);
       agentStates[bot.id].lastSpokenAt = Date.now();
-      Novus.botReplyToUser(bot.id, getProgressPct(), Date.now() - startTime);
+      Novus.botReplyToUser(bot.id, getProgressPct(), Date.now() - startTime, reply, text);
     }, staggerDelay);
   });
 }
