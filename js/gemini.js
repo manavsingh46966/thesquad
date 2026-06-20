@@ -100,6 +100,35 @@ Max 2 sentences. Don't repeat what you or someone else just said. Feel real, not
 }
 
 /**
+ * Fresh reaction grounded in a real, AI-marked speakable transcript window.
+ * Generated live, at the moment the bot reacts — never a pre-written line.
+ * Used when a real transcript is available; falls back to generateReaction()
+ * when it's not (see agents.js).
+ */
+async function generateGroundedReaction(bot, context, transcriptSnippet, windowTag) {
+  const prompt = `You are ${bot.name}. ${bot.personalityPrompt}
+
+You're watching "${context.title}" with friends in a group chat, currently at ${context.timestamp}.
+${context.timeJumped ? "The viewer just jumped/skipped to this exact part of the video — react to that too, like 'whoa you jumped right to this part' or similar, naturally." : ''}
+
+What's actually happening right now in the video (real transcript, this moment is tagged "${windowTag}"):
+"${transcriptSnippet}"
+
+What you said recently: ${context.ownRecentText}
+What others said recently: ${context.othersRecentText}
+
+React fresh, right now, like you're actually watching this exact moment with friends — specific to what's really happening (you DO know this part, it's quoted above), not generic. Max 2 sentences. Feel real, not generic. Don't repeat what you or someone else just said.`;
+
+  const result = await callGeminiWithHardening({
+    prompt,
+    model: FAST_MODEL,
+    maxTokens: 70
+  });
+
+  return result; // null if failed — caller treats as silent skip
+}
+
+/**
  * Reply to a user message — same hardening pattern.
  */
 async function decideReplyToUser(bot, userMessage, context) {

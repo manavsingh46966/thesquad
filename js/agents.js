@@ -4,8 +4,10 @@
 
 const TICK_INTERVAL_MS = 25000; // 25s base interval — fewer, more considered chances to speak
 const MIN_COOLDOWN_MS = 35000; // hard floor: a bot cannot speak again within 35s of its last message, regardless of AI decision
+const TRANSCRIPT_CHECK_INTERVAL_MS = 4000; // cheap, no-AI check — how often we look for a speakable window
 const agentStates = {}; // botId -> AgentState
 const activeIntervals = {}; // botId -> interval handle
+let transcriptWatcherInterval = null;
 let chatLog = []; // shared chat history: {sender, text, timestamp}
 let videoContext = { title: '', videoId: '', currentTime: 0, duration: 1, isPlaying: false };
 
@@ -14,7 +16,8 @@ function initAgentState(bot) {
     lastSpokenAt: null,
     recentMessages: [],
     silenceStreak: 0,
-    personalityPrompt: bot.personalityPrompt
+    personalityPrompt: bot.personalityPrompt,
+    lastReactedWindowKey: null // tracks which marked transcript window this bot last reacted to
   };
 }
 
@@ -64,6 +67,12 @@ function buildContext(bot) {
 async function runAgentTick(bot) {
   if (!videoContext.isPlaying) return; // don't tick while paused
 
+  // If a real transcript was successfully marked for this video, the transcript
+  // watcher (checkTranscriptWindowsTick) owns all reaction decisions — grounded,
+  // content-aware, fires only at real marked beats. The old blind SPEAK/SILENT
+  // loop steps aside entirely rather than double-reacting alongside it.
+  if (transcriptAvailable) return;
+
   const state = agentStates[bot.id];
   // Hard floor: don't even ask the model if we're still inside the cooldown window.
   // Saves a call AND guarantees bots can never machine-gun messages regardless of AI judgment.
@@ -99,6 +108,56 @@ async function runAgentTick(bot) {
 
   // Step 6: other bots may react with emoji only (30% chance each)
   triggerInterBotEmojis(bot);
+}
+
+/**
+ * Cheap, no-AI check (runs every TRANSCRIPT_CHECK_INTERVAL_MS while playing):
+ * is the current playback time inside a real, pre-marked speakable window?
+ * If yes — and this bot hasn't already reacted to this exact window since
+ * last leaving it — generate a FRESH, transcript-grounded reaction right now.
+ * If no — nothing happens, no AI call spent at all.
+ */
+function checkTranscriptWindowsTick() {
+  if (!videoContext.isPlaying) return;
+  if (!transcriptAvailable) return;
+
+  const window = getSpeakableWindowAt(videoContext.currentTime);
+  if (!window) return;
+
+  const snippet = getTranscriptSnippetForWindow(window);
+  const activeBotIds = Object.keys(activeIntervals);
+
+  activeBotIds.forEach((botId, index) => {
+    const state = agentStates[botId];
+    if (!state) return;
+    // Re-entering the SAME window without ever leaving it shouldn't re-trigger.
+    // Jumping away and back (or to a different window) clears this naturally,
+    // since lastReactedWindowKey will no longer match.
+    if (state.lastReactedWindowKey === window.key) return;
+    state.lastReactedWindowKey = window.key; // mark immediately — avoids duplicate fires from rapid ticks
+
+    const bot = getAllBots()[botId];
+    if (!bot) return;
+    const staggerDelay = index * 900 + Math.random() * 500; // light stagger so bots don't all land at once
+
+    setTimeout(async () => {
+      const context = buildContext(bot); // also computes timeJumped vs this bot's last seen time
+      const reaction = await generateGroundedReaction(bot, context, snippet, window.tag);
+
+      if (!reaction) {
+        Novus.botDecisionSilent(bot.id, context.progressPct);
+        return;
+      }
+
+      displayBotMessage(bot, reaction);
+      state.lastSpokenAt = Date.now();
+      state.recentMessages.push(reaction);
+      state.silenceStreak = 0;
+
+      Novus.botReaction(bot.id, context.progressPct, videoContext.currentTime, reaction.length, reaction);
+      triggerInterBotEmojis(bot);
+    }, staggerDelay);
+  });
 }
 
 function triggerInterBotEmojis(speakingBot) {
@@ -140,6 +199,15 @@ function startAgentLoops(activeBotIds) {
     setTimeout(startInterval, firstTickDelay);
   });
 
+  // Transcript watcher: cheap, content-aware check, runs independently of the
+  // per-bot blind tick loop above. Self-gates on transcriptAvailable, so if the
+  // transcript hasn't finished loading yet (or never loads), it's a harmless no-op
+  // and the blind loop above remains the active path.
+  if (!transcriptWatcherInterval) {
+    checkTranscriptWindowsTick(); // catch the case where playback started already inside a window
+    transcriptWatcherInterval = setInterval(checkTranscriptWindowsTick, TRANSCRIPT_CHECK_INTERVAL_MS);
+  }
+
   // Random welcome message from one bot shortly after load
   setTimeout(() => {
     const ids = activeBotIds;
@@ -163,6 +231,10 @@ function resumeAgentLoops() {
 function stopAgentLoops() {
   Object.values(activeIntervals).forEach(clearInterval);
   Object.keys(activeIntervals).forEach((k) => delete activeIntervals[k]);
+  if (transcriptWatcherInterval) {
+    clearInterval(transcriptWatcherInterval);
+    transcriptWatcherInterval = null;
+  }
 }
 
 /**

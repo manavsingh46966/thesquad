@@ -237,6 +237,13 @@ async function loadYouTubeVideo(videoId) {
   videoContext.title = title;
   Novus.videoLoaded(videoId, title);
 
+  // Kick off transcript pre-processing in the background — NOT awaited, so the
+  // video starts immediately. If/when it resolves, transcriptAvailable flips to
+  // true and the transcript watcher (already running via startAgentLoops) starts
+  // using it automatically on its next check. If it fails or there's no transcript,
+  // the existing vibes-based blind decision loop simply keeps running as before.
+  initTranscriptForVideo(videoId, title);
+
   ytPlayer = new YT.Player('youtube-player', {
     videoId,
     playerVars: { autoplay: 1, rel: 0 },
