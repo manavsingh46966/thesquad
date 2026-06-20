@@ -51,10 +51,19 @@ async function callGeminiWithHardening(payload, attempt = 1) {
  * Fix 1: short prompt, capped output, lightweight model.
  */
 async function decideSpeakOrSilent(bot, context) {
-  const prompt = `You are ${bot.name}. Personality: ${bot.personalityPrompt.split('.')[0]}.
-Video: "${context.title}" at ${context.progressPct}% progress.
-Recent chat: ${context.recentMessages.slice(-3).map(m => `${m.sender}: ${m.text}`).join(' | ') || '(nothing yet)'}
-You last spoke ${context.secondsSinceLastSpoke}s ago.
+  const prompt = `You are ${bot.name}, hanging out watching a video with friends in a group chat.
+Personality: ${bot.personalityPrompt.split('.')[0]}.
+
+Video: "${context.title}", currently at ${context.timestamp} (${context.progressPct}% through).
+${context.timeJumped ? 'The viewer just skipped/jumped to a different part of the video.' : ''}
+What you said recently: ${context.ownRecentText}
+What others said recently: ${context.othersRecentText}
+You last spoke ${context.secondsSinceLastSpoke}s ago. You've stayed silent ${context.silenceStreak} times in a row.
+
+Real people watching together do NOT comment constantly — most moments pass with no reaction at all.
+Only SPEAK if there's a genuinely good, specific reason to right now (something funny/surprising/worth reacting to, or you're directly continuing a conversation). If in doubt, stay SILENT — silence is the normal, expected answer, not a failure.
+Do not speak just because you haven't spoken in a while, and do not repeat or rephrase what you or someone else just said.
+
 Reply with ONLY one word: SPEAK or SILENT`;
 
   const result = await callGeminiWithHardening({
@@ -64,7 +73,7 @@ Reply with ONLY one word: SPEAK or SILENT`;
   });
 
   if (!result) return 'SILENT'; // graceful fail
-  return result.toUpperCase().includes('SPEAK') ? 'SPEAK' : 'SILENT';
+  return result.toUpperCase().startsWith('SPEAK') ? 'SPEAK' : 'SILENT';
 }
 
 /**
@@ -73,11 +82,13 @@ Reply with ONLY one word: SPEAK or SILENT`;
 async function generateReaction(bot, context) {
   const prompt = `You are ${bot.name}. ${bot.personalityPrompt}
 
-Video: "${context.title}" — currently at ${context.timestamp} (${context.progressPct}% through)
-Recent chat: ${context.recentMessages.slice(-3).map(m => `${m.sender}: ${m.text}`).join(' | ') || '(nothing yet)'}
-You haven't spoken in ${context.secondsSinceLastSpoke} seconds.
+You're watching "${context.title}" with friends in a group chat. You're at ${context.timestamp} (${context.progressPct}% through).
+${context.timeJumped ? "The viewer just skipped to a different part — don't assume you know what's currently happening, react more generally or ask/comment about the jump itself." : ''}
+What you said recently: ${context.ownRecentText}
+What others said recently: ${context.othersRecentText}
 
-React to this moment in character. Be specific to what's happening. Max 2 sentences. Feel real.`;
+Important: you can't actually see the video frame-by-frame, only its title and roughly where you are in it — so don't invent specific visual details you couldn't know. React the way a friend texting from another room would: general vibes, banter, reacting to what others said, not a play-by-play.
+Max 2 sentences. Don't repeat what you or someone else just said. Feel real, not generic.`;
 
   const result = await callGeminiWithHardening({
     prompt,
@@ -94,7 +105,10 @@ React to this moment in character. Be specific to what's happening. Max 2 senten
 async function decideReplyToUser(bot, userMessage, context) {
   const prompt = `You are ${bot.name}. Personality: ${bot.personalityPrompt.split('.')[0]}.
 The user just said: "${userMessage}"
-Given your personality, do you reply? Reply with ONLY one word: SPEAK or SILENT`;
+
+Given your personality, would you naturally jump in here? Not every message needs a reply from every friend — sometimes one or two people respond and others just let it pass. If this doesn't really call for your voice specifically, stay SILENT.
+
+Reply with ONLY one word: SPEAK or SILENT`;
 
   const result = await callGeminiWithHardening({
     prompt,
@@ -103,7 +117,7 @@ Given your personality, do you reply? Reply with ONLY one word: SPEAK or SILENT`
   });
 
   if (!result) return 'SILENT';
-  return result.toUpperCase().includes('SPEAK') ? 'SPEAK' : 'SILENT';
+  return result.toUpperCase().startsWith('SPEAK') ? 'SPEAK' : 'SILENT';
 }
 
 async function generateReplyToUser(bot, userMessage, context) {

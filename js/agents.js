@@ -2,7 +2,8 @@
 // AGENTIC LOOP — staggered, hardened, per-bot
 // ============================================
 
-const TICK_INTERVAL_MS = 15000; // 15s base interval
+const TICK_INTERVAL_MS = 25000; // 25s base interval — fewer, more considered chances to speak
+const MIN_COOLDOWN_MS = 35000; // hard floor: a bot cannot speak again within 35s of its last message, regardless of AI decision
 const agentStates = {}; // botId -> AgentState
 const activeIntervals = {}; // botId -> interval handle
 let chatLog = []; // shared chat history: {sender, text, timestamp}
@@ -34,12 +35,26 @@ function buildContext(bot) {
     ? Math.round((Date.now() - state.lastSpokenAt) / 1000)
     : 9999;
 
+  // Detect a time jump (user scrubbed forward/back) so bots know their last
+  // sense of "where we are" may be stale, instead of reacting as if no time passed.
+  const lastTime = state.lastSeenVideoTime ?? videoContext.currentTime;
+  const timeJumped = Math.abs(videoContext.currentTime - lastTime) > 20;
+  state.lastSeenVideoTime = videoContext.currentTime;
+
+  const allRecent = chatLog.slice(-6);
+  const ownRecent = allRecent.filter((m) => m.sender === bot.name).slice(-2);
+  const othersRecent = allRecent.filter((m) => m.sender !== bot.name).slice(-3);
+
   return {
     title: videoContext.title,
     timestamp: formatTimestamp(videoContext.currentTime),
     progressPct: getProgressPct(),
-    recentMessages: chatLog.slice(-5),
-    secondsSinceLastSpoke
+    recentMessages: allRecent, // kept for back-compat in reply prompts
+    ownRecentText: ownRecent.map((m) => m.text).join(' | ') || '(nothing yet)',
+    othersRecentText: othersRecent.map((m) => `${m.sender}: ${m.text}`).join(' | ') || '(nothing yet)',
+    secondsSinceLastSpoke,
+    silenceStreak: state.silenceStreak || 0,
+    timeJumped
   };
 }
 
@@ -48,6 +63,13 @@ function buildContext(bot) {
  */
 async function runAgentTick(bot) {
   if (!videoContext.isPlaying) return; // don't tick while paused
+
+  const state = agentStates[bot.id];
+  // Hard floor: don't even ask the model if we're still inside the cooldown window.
+  // Saves a call AND guarantees bots can never machine-gun messages regardless of AI judgment.
+  if (state.lastSpokenAt && Date.now() - state.lastSpokenAt < MIN_COOLDOWN_MS) {
+    return;
+  }
 
   const context = buildContext(bot);
   const decision = await decideSpeakOrSilent(bot, context);
