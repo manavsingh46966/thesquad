@@ -246,23 +246,47 @@ async function handleUserMessage(text) {
 
   const allBots = getAllBots();
   const activeBotIds = Object.keys(activeIntervals);
+  if (activeBotIds.length === 0) return;
 
-  activeBotIds.forEach((botId, index) => {
+  let anyoneReplied = false;
+
+  const replyAttempts = activeBotIds.map((botId, index) => {
     const bot = allBots[botId];
     const staggerDelay = index * 1200; // 0s, 1.2s, 2.5s...
 
-    setTimeout(async () => {
-      const context = buildContext(bot);
-      const decision = await decideReplyToUser(bot, text, context);
-      if (decision === 'SILENT') return;
+    return new Promise((resolve) => {
+      setTimeout(async () => {
+        const context = buildContext(bot);
+        const decision = await decideReplyToUser(bot, text, context);
+        if (decision === 'SILENT') return resolve(false);
 
-      const startTime = Date.now();
-      const reply = await generateReplyToUser(bot, text, context);
-      if (!reply) return; // graceful fail
+        const startTime = Date.now();
+        const reply = await generateReplyToUser(bot, text, context);
+        if (!reply) return resolve(false); // graceful fail
 
-      displayBotMessage(bot, reply);
-      agentStates[bot.id].lastSpokenAt = Date.now();
-      Novus.botReplyToUser(bot.id, getProgressPct(), Date.now() - startTime, reply, text);
-    }, staggerDelay);
+        displayBotMessage(bot, reply);
+        agentStates[bot.id].lastSpokenAt = Date.now();
+        anyoneReplied = true;
+        Novus.botReplyToUser(bot.id, getProgressPct(), Date.now() - startTime, reply, text);
+        resolve(true);
+      }, staggerDelay);
+    });
+  });
+
+  // Safety net: if every bot independently decided SILENT (or failed), pick one
+  // at random to reply anyway, a beat later — keeps the "not everyone always
+  // replies" personality feel while guaranteeing you're never met with total
+  // silence, which matters most right now during demo recording.
+  Promise.all(replyAttempts).then(async () => {
+    if (anyoneReplied) return;
+    const fallbackBot = allBots[activeBotIds[Math.floor(Math.random() * activeBotIds.length)]];
+    if (!fallbackBot) return;
+    const context = buildContext(fallbackBot);
+    const startTime = Date.now();
+    const reply = await generateReplyToUser(fallbackBot, text, context);
+    if (!reply) return;
+    displayBotMessage(fallbackBot, reply);
+    agentStates[fallbackBot.id].lastSpokenAt = Date.now();
+    Novus.botReplyToUser(fallbackBot.id, getProgressPct(), Date.now() - startTime, reply, text);
   });
 }
