@@ -16,7 +16,7 @@
 // stays false and agents.js falls back to the old vibes-based blind decision loop.
 
 const TRANSCRIPT_SOURCE = (videoId) => `https://youtube-transcript.ai/transcript/${videoId}.txt`;
-const TRANSCRIPT_FETCH_TIMEOUT_MS = 8000;
+const TRANSCRIPT_FETCH_TIMEOUT_MS = 12000;
 const WINDOW_MATCH_BUFFER_SEC = 3; // small grace window so we don't miss a beat by a couple seconds
 
 let transcriptAvailable = false;
@@ -107,11 +107,15 @@ Respond with ONLY valid JSON, no other text, in this exact format:
 
 Use numeric seconds for start/end (not mm:ss strings). If genuinely nothing stands out, respond with [].`;
 
-  const result = await callGeminiWithHardening({
-    prompt,
-    model: QUALITY_MODEL,
-    maxTokens: 800
-  });
+  const result = await callGeminiWithHardening(
+    {
+      prompt,
+      model: QUALITY_MODEL,
+      maxTokens: 800
+    },
+    1,
+    20000 // 20s — this runs ONCE per video with a large prompt, not on a tight loop, so it can afford to wait
+  );
 
   if (!result) return null;
 

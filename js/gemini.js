@@ -15,9 +15,9 @@ const QUALITY_MODEL = 'openai/gpt-4.1-mini';
  * Generic fetch wrapper with timeout + single retry.
  * On any failure after retry, resolves to null (caller treats null as SILENT / skip).
  */
-async function callGeminiWithHardening(payload, attempt = 1) {
+async function callGeminiWithHardening(payload, attempt = 1, timeoutMs = GEMINI_TIMEOUT_MS) {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), GEMINI_TIMEOUT_MS);
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const res = await fetch(GEMINI_ENDPOINT, {
@@ -35,7 +35,7 @@ async function callGeminiWithHardening(payload, attempt = 1) {
     clearTimeout(timeoutId);
     if (attempt === 1) {
       // Fix 4: retry once
-      return callGeminiWithHardening(payload, 2);
+      return callGeminiWithHardening(payload, 2, timeoutMs);
     }
     // Fix 2: graceful fail — caller treats null as SILENT
     console.warn('Gemini call failed after retry:', err.message);
