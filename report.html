@@ -436,26 +436,54 @@ function renderBotPopularity(sessions) {
 }
 
 function renderChatSamples(sessions) {
-  // We don't store raw chat transcripts in localStorage today (only aggregate stats per session).
-  // Show what we actually have honestly, with a note on how to get real transcript samples.
   const el = document.getElementById('chat-samples');
   if (sessions.length === 0) {
     el.innerHTML = `<p style="font-size:12px;color:var(--text-dim);">No sessions logged yet.</p>`;
     return;
   }
-  el.innerHTML = sessions.map((s, i) => `
-    <div class="chat-sample">
-      <div class="chat-sample-avatar" style="background:${BOT_COLORS[(s.most_active_bot||'maya').toLowerCase()] || 'var(--glow-amber)'}">${(s.most_active_bot||'?')[0]}</div>
-      <div class="chat-sample-body">
-        <div class="chat-sample-name">Session #${i+1} · ${capitalize(s.most_active_bot||'unknown')} was most active</div>
-        <div class="chat-sample-text">${s.total_messages_sent} user messages sent · ${s.completion_rate}% watched · bots: ${(s.bots||[]).map(capitalize).join(', ')}</div>
+
+  const withTranscript = sessions.filter(s => s.transcript && s.transcript.length > 0);
+
+  if (withTranscript.length === 0) {
+    // Old sessions, recorded before transcript storage was added — honest fallback.
+    el.innerHTML = sessions.map((s, i) => `
+      <div class="chat-sample">
+        <div class="chat-sample-avatar" style="background:${BOT_COLORS[(s.most_active_bot||'maya').toLowerCase()] || 'var(--glow-amber)'}">${(s.most_active_bot||'?')[0]}</div>
+        <div class="chat-sample-body">
+          <div class="chat-sample-name">Session #${i+1} · ${capitalize(s.most_active_bot||'unknown')} was most active</div>
+          <div class="chat-sample-text">${s.total_messages_sent} user messages sent · ${s.completion_rate}% watched · bots: ${(s.bots||[]).map(capitalize).join(', ')}</div>
+        </div>
+      </div>`).join('') + `
+      <p style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.5;">
+        These sessions were recorded before transcript storage was added — only aggregates available.
+        Run a new session to see real chat text here.
+      </p>`;
+    return;
+  }
+
+  el.innerHTML = withTranscript.map((s, i) => `
+    <div class="chat-sample" style="flex-direction:column; align-items:flex-start;">
+      <div class="chat-sample-name" style="margin-bottom:6px;">Session #${i+1} · ${capitalize(s.most_active_bot||'unknown')} was most active · ${s.completion_rate}% watched</div>
+      <div style="display:flex; flex-direction:column; gap:4px; width:100%;">
+        ${s.transcript.slice(0, 8).map(m => `
+          <div style="font-size:12px; line-height:1.4;">
+            <span style="color:${m.sender === 'You' ? 'var(--glow-amber)' : (BOT_COLORS[m.sender.toLowerCase()] || 'var(--text-main)')}; font-weight:600;">${escapeHtml(m.sender)}:</span>
+            <span style="color:var(--text-dim);">${escapeHtml(m.text)}</span>
+          </div>`).join('')}
+        ${s.transcript.length > 8 ? `<div style="font-size:11px; color:var(--text-dim);">+ ${s.transcript.length - 8} more messages</div>` : ''}
       </div>
     </div>`).join('') + `
     <p style="font-size:11px; color:var(--text-dim); margin-top:10px; line-height:1.5;">
-      Note: full chat transcripts aren't stored locally today — only per-session aggregates.
-      Real message/reaction text IS flowing into Novus (<span style="font-family:var(--font-mono)">reaction_text</span>,
-      <span style="font-family:var(--font-mono)">message_text</span> properties), viewable per-event in the Novus dashboard.
+      Real chat text, stored locally from actual sessions. The same text is also flowing into Novus
+      (<span style="font-family:var(--font-mono)">reaction_text</span>,
+      <span style="font-family:var(--font-mono)">message_text</span> properties).
     </p>`;
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : String(str);
+  return div.innerHTML;
 }
 
 function renderSessionList(sessions) {
