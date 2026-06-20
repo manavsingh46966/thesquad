@@ -5,10 +5,30 @@
 // you accumulate during real test sessions. It does NOT fabricate numbers.
 // In a production version, this would pull directly from the Novus API.
  
+const MAX_STORED_SESSIONS = 50; // keep storage small and predictable, well under any browser's quota
+ 
 function logSessionForAdmin(stats) {
-  const sessions = JSON.parse(localStorage.getItem('thesquad_sessions') || '[]');
+  let sessions = JSON.parse(localStorage.getItem('thesquad_sessions') || '[]');
   sessions.push({ ...stats, timestamp: Date.now() });
-  localStorage.setItem('thesquad_sessions', JSON.stringify(sessions));
+ 
+  // Keep only the most recent N sessions — oldest get dropped first
+  if (sessions.length > MAX_STORED_SESSIONS) {
+    sessions = sessions.slice(sessions.length - MAX_STORED_SESSIONS);
+  }
+ 
+  try {
+    localStorage.setItem('thesquad_sessions', JSON.stringify(sessions));
+  } catch (err) {
+    // Quota exceeded (rare, but possible on some browsers with smaller limits) —
+    // drop the oldest half and retry once instead of losing the new session entirely.
+    console.warn('localStorage quota issue, trimming old sessions:', err.message);
+    sessions = sessions.slice(Math.ceil(sessions.length / 2));
+    try {
+      localStorage.setItem('thesquad_sessions', JSON.stringify(sessions));
+    } catch (err2) {
+      console.warn('Still failed after trimming, giving up on this save:', err2.message);
+    }
+  }
 }
  
 function getStoredSessions() {

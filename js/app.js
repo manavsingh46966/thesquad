@@ -297,7 +297,8 @@ function handleVideoEnded() {
     completion_rate: completionRate,
     total_messages_sent: chatLog.length,
     most_active_bot: getMostActiveBot(),
-    bots: selectedBotIds
+    bots: selectedBotIds,
+    transcript: chatLog.slice(-40).map(m => ({ sender: m.sender, text: m.text })) // last 40 messages, real chat text, stored locally for the admin report
   };
 
   Novus.videoEnded(endStats);
