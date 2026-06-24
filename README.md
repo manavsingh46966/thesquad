@@ -3,7 +3,8 @@
 Watch anything together, with an AI squad that reacts in real time.
 
 ## Local Setup
-
+#for admin dasboard go to -https://thesquadd.netlify.app/report.html
+password- M@hi2005
 1. **Get a Gemini API key**
    - Go to https://aistudio.google.com/app/apikey
    - Create a free API key
